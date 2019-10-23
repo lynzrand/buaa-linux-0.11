@@ -1,0 +1,8 @@
+*.o
+boot/*
+!boot/*.s
+Image
+tools/build
+tools/system
+System.map
+tags
