@@ -46,6 +46,11 @@ Image: boot/bootsect boot/setup tools/system tools/build
 	rm system.tmp
 	rm tools/kernel -f
 	sync
+	
+	make Extra
+
+# Put your extra steps here
+Extra:
 	cp Image /mnt/d/Study/os
 
 disk: Image
