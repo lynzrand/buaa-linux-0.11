@@ -28,7 +28,7 @@
 
 ### 运行
 
-使用 QEMU 运行 `qemu-system-i386 -hdb path/to/Image -hda path/to/hdc-0.11.img -m 16`
+使用 QEMU 运行 `qemu-system-i386 -boot a -fda Image -hda .\hdc-0.11.img -m 16M`
 即可。
 
 ## 与原先项目的区别
