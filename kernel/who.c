@@ -16,8 +16,8 @@ int sys_whoami(char *name, unsigned int size)
     printk("whoami gets called!");
     if (size < _name_size)
     {
-        errno = EINVAL;
-        return -2;
+        return -EINVAL;
+        // return -2;
     }
     for (i = 0; i < size; i++)
     {
@@ -45,6 +45,6 @@ int sys_iam(const char *name)
         _name[i] = 0;
     }
     _name_size = 0;
-    errno = EINVAL;
-    return -2;
+    return -EINVAL;
+    // return -2;
 }
