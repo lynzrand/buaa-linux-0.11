@@ -7,21 +7,21 @@
 #include <linux/tty.h>
 #include <sys/times.h>
 #include <sys/utsname.h>
-int _name_size = 0;
-char _name[24] = {0};
+int whoami_size = 0;
+char whoami_name[24] = {0};
 
 int sys_whoami(char *name, unsigned int size)
 {
     int i;
-    printk("whoami gets called!");
-    if (size < _name_size)
+    // printk("whoami gets called\n");
+    if (size < whoami_size)
     {
         return -EINVAL;
         // return -2;
     }
     for (i = 0; i < size; i++)
     {
-        put_fs_byte(_name[i], name);
+        put_fs_byte(whoami_name[i], name + i);
     }
     return 0;
 }
@@ -29,22 +29,18 @@ int sys_whoami(char *name, unsigned int size)
 int sys_iam(const char *name)
 {
     int i;
-    _name_size = 0;
-    printk("whoami gets called!");
-    for (; _name_size < 24; _name_size++)
+    whoami_size = 0;
+    // printk("iam gets called!\n");
+    for (; whoami_size < 24; whoami_size++)
     {
-        _name[_name_size] = get_fs_byte(name + _name_size);
-        if (_name[_name_size] == '\0')
+        whoami_name[whoami_size] = get_fs_byte(name + whoami_size);
+        if (whoami_name[whoami_size] == '\0')
         {
-            _name_size++;
+            whoami_size++;
             return 0;
         }
     }
-    for (i = 0; i < 24; i++)
-    {
-        _name[i] = 0;
-    }
-    _name_size = 0;
+    whoami_size = 0;
     return -EINVAL;
     // return -2;
 }
