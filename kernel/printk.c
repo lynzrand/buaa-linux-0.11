@@ -18,6 +18,8 @@ static char buf[1024];
 
 extern int vsprintf(char *buf, const char *fmt, va_list args);
 
+extern long last_pid;
+
 int printk(const char *fmt, ...)
 {
 	va_list args;
@@ -75,24 +77,28 @@ int fprintk(int fd, const char *fmt, ...)
 	else
 	/* 假定>=3的描述符都与文件关联。事实上，还存在很多其它情况，这里并没有考虑。*/
 	{
-		/* 从进程0的文件描述符表中得到文件句柄 */
-		if (!(file = task[0]->filp[fd]))
-			return 0;
-		inode = file->f_inode;
+		/* Work only if we have process 1 (init) up and working */
+		if (last_pid > 1)
+		{
+			/* 从进程1的文件描述符表中得到文件句柄 */
+			if (!(file = task[1]->filp[fd]))
+				return 0;
+			inode = file->f_inode;
 
-		__asm__("push %%fs\n\t"
-				"push %%ds\n\t"
-				"pop %%fs\n\t"
-				"pushl %0\n\t"
-				"pushl $logbuf\n\t"
-				"pushl %1\n\t"
-				"pushl %2\n\t"
-				"call file_write\n\t"
-				"addl $12,%%esp\n\t"
-				"popl %0\n\t"
-				"pop %%fs" ::"r"(count),
-				"r"(file), "r"(inode)
-				: "ax", "cx", "dx");
+			__asm__("push %%fs\n\t"
+					"push %%ds\n\t"
+					"pop %%fs\n\t"
+					"pushl %0\n\t"
+					"pushl $logbuf\n\t"
+					"pushl %1\n\t"
+					"pushl %2\n\t"
+					"call file_write\n\t"
+					"addl $12,%%esp\n\t"
+					"popl %0\n\t"
+					"pop %%fs" ::"r"(count),
+					"r"(file), "r"(inode)
+					: "ax", "cx", "dx");
+		}
 	}
 	return count;
 }
