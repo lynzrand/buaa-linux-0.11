@@ -257,4 +257,6 @@ unsigned long __limit; \
 __asm__("lsll %1,%0\n\tincl %0":"=r" (__limit):"r" (segment)); \
 __limit; })
 
+#define log_proc(pid_src, stat) fprintk(3, "%d\t%c\t%d\n", (pid_src)->pid, stat, jiffies);
+
 #endif

@@ -141,7 +141,7 @@ int do_exit(long code)
     kill_session();
   current->state = TASK_ZOMBIE;
 
-  fprintk(3, "%d\t%c\t%d\n", current->pid, 'E', jiffies);
+  log_proc(current, 'E');
 
   current->exit_code = code;
   tell_father(current->father);

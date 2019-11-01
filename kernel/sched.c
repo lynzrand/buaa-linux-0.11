@@ -127,21 +127,30 @@ void schedule(void)
       }
       if (((*p)->signal & ~(_BLOCKABLE & (*p)->blocked)) &&
           (*p)->state == TASK_INTERRUPTIBLE)
+      {
         (*p)->state = TASK_RUNNING;
+
+        // p is ready
+        log_proc((*p), 'J');
+      }
     }
 
   /* this is the scheduler proper: */
-
+  // while true
   while (1)
   {
     c = -1;
+    // next process
     next = 0;
     i = NR_TASKS;
+    // last process
     p = &task[NR_TASKS];
     while (--i)
     {
+      // if p is empty, continue
       if (!*--p)
         continue;
+      // find process with largetst counter, switch to it
       if ((*p)->state == TASK_RUNNING && (*p)->counter > c)
         c = (*p)->counter, next = i;
     }
@@ -151,12 +160,23 @@ void schedule(void)
       if (*p)
         (*p)->counter = ((*p)->counter >> 1) + (*p)->priority;
   }
+
+  if (*(task + next) != (current))
+  // switch task
+  {
+    log_proc(*(task + next), 'R');
+  }
+
   switch_to(next);
 }
 
 int sys_pause(void)
 {
   current->state = TASK_INTERRUPTIBLE;
+
+  // current process gets blocked
+  log_proc(current, 'W');
+
   schedule();
   return 0;
 }
@@ -177,14 +197,17 @@ void sleep_on(struct task_struct **p)
   *p = current;
   current->state = TASK_UNINTERRUPTIBLE;
 
-  fprintk(3, "%d\t%c\t%d\n", current->pid, 'W', jiffies);
+  // current process gets blocked
+  log_proc(current, 'W');
 
   schedule();
   if (tmp)
+  {
     tmp->state = 0;
 
-  // initialize process
-  fprintk(3, "%d\t%c\t%d\n", tmp->pid, 'R', jiffies);
+    // tmp is ready
+    log_proc(tmp, 'J');
+  }
 }
 
 void interruptible_sleep_on(struct task_struct **p)
@@ -200,20 +223,25 @@ void interruptible_sleep_on(struct task_struct **p)
 repeat:
   current->state = TASK_INTERRUPTIBLE;
 
-  fprintk(3, "%d\t%c\t%d\n", current->pid, 'W', jiffies);
+  // current process gets blocked
+  log_proc(current, 'W');
 
   schedule();
   if (*p && *p != current)
   {
     (**p).state = 0;
+
+    // p is ready
+    log_proc(*p, 'J');
+
     goto repeat;
   }
   *p = NULL;
   if (tmp)
     tmp->state = 0;
 
-  // initialize process
-  fprintk(3, "%d\t%c\t%d\n", tmp->pid, 'R', jiffies);
+  // tmp is ready
+  log_proc(tmp, 'J');
 }
 
 void wake_up(struct task_struct **p)
@@ -221,6 +249,8 @@ void wake_up(struct task_struct **p)
   if (p && *p)
   {
     (**p).state = 0;
+    // p runs
+    log_proc(*p, 'R');
     *p = NULL;
   }
 }

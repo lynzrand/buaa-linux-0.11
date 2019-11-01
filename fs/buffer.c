@@ -272,13 +272,11 @@ void brelse(struct buffer_head *buf)
 	wake_up(&buffer_wait);
 }
 
-#include <linux/sched.h>
 /*
  * bread() reads a specified block and returns the buffer that contains
  * it. It returns NULL if the block was unreadable.
  */
-struct buffer_head *
-bread(int dev, int block)
+struct buffer_head *bread(int dev, int block)
 {
 	struct buffer_head *bh;
 
