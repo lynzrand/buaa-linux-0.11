@@ -13,6 +13,7 @@
 #include <stddef.h>
 
 #include <linux/kernel.h>
+#include <linux/sched.h>
 
 static char buf[1024];
 
@@ -76,11 +77,14 @@ int fprintk(int fd, const char *fmt, ...)
 	/* 假定>=3的描述符都与文件关联。事实上，还存在很多其它情况，这里并没有考虑。*/
 	{
 		/* Work only if we have process 1 (init) up and working */
-		if (last_pid > 1)
+		if (last_pid > 0)
 		{
 			/* 从进程1的文件描述符表中得到文件句柄 */
 			if (!(file = task[1]->filp[fd]))
+			{
+				printk("fprintk(%d) failed: no file; planned= %s\n", fd, logbuf);
 				return 0;
+			}
 			inode = file->f_inode;
 
 			__asm__("push %%fs\n\t"
@@ -96,6 +100,11 @@ int fprintk(int fd, const char *fmt, ...)
 					"pop %%fs" ::"r"(count),
 					"r"(file), "r"(inode)
 					: "ax", "cx", "dx");
+			printk("fprintk(%d) success: %s\n", fd, logbuf);
+		}
+		else
+		{
+			printk("fprintk(%d) failed: %s\n", fd, logbuf);
 		}
 	}
 	return count;

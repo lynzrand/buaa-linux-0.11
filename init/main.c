@@ -178,7 +178,7 @@ void init(void)
 	(void)dup(0);
 	(void)dup(0);
 
-	open("/var/process.log", O_WRONLY | O_CREAT | O_TRUNC, 3);
+	(void)open("/var/process.log", O_WRONLY | O_CREAT | O_TRUNC, 0777);
 
 	printf("%d buffers = %d bytes buffer space\n\r", NR_BUFFERS,
 		   NR_BUFFERS * BLOCK_SIZE);
