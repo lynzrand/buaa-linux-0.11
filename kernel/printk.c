@@ -55,6 +55,7 @@ int fprintk(int fd, const char *fmt, ...)
 	va_start(args, fmt);
 	count = vsprintf(logbuf, fmt, args);
 	va_end(args);
+
 	/* 如果输出到stdout或stderr，直接调用sys_write即可 */
 	if (fd < 3)
 	{
@@ -82,7 +83,7 @@ int fprintk(int fd, const char *fmt, ...)
 			/* 从进程1的文件描述符表中得到文件句柄 */
 			if (!(file = task[1]->filp[fd]))
 			{
-				printk("fprintk(%d) failed: no file; planned= %s\n", fd, logbuf);
+				printk("fprintk(%d) failed: no file\n", fd);
 				return 0;
 			}
 			inode = file->f_inode;
@@ -100,11 +101,10 @@ int fprintk(int fd, const char *fmt, ...)
 					"pop %%fs" ::"r"(count),
 					"r"(file), "r"(inode)
 					: "ax", "cx", "dx");
-			printk("fprintk(%d) success: %s\n", fd, logbuf);
 		}
 		else
 		{
-			printk("fprintk(%d) failed: %s\n", fd, logbuf);
+			printk("fprintk(%d) failed: no init\n", fd);
 		}
 	}
 	return count;

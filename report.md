@@ -14,7 +14,15 @@ title: 进程运行轨迹的跟踪
 
 ![添加 `fprintk` 函数](https://i.loli.net/2019/11/01/nDk1cmMgxtNUBVJ.png)
 
-![添加 `process.log` 初始化函数](https://i.loli.net/2019/11/01/EwizjdbY5yhUSTI.png)
+定义了以下的宏以方便记录和调试：
+
+```c
+#define log_proc(pid, type)                                     \
+	{                                                           \
+		fprintk(3, "%d\t%c\t%d\n", pid, type, jiffies);         \
+		printk("\t[log_proc]\t%d\t%c\t%d\n", pid, type, jiffies); \
+	}
+```
 
 _因为在 QEMU 环境下把硬盘初始化函数放在 0 号进程中会引起 Kernel Panic（见 <https://piazza.com/class/k00qtx91fn64t1?cid=12>），因此把 `fprintk` 规定为只在 1 号进程创建之后进行记录，维持硬盘初始化函数在 1 号进程中不变。_
 
