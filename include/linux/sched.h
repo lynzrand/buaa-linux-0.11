@@ -252,10 +252,10 @@ unsigned long __limit; \
 __asm__("lsll %1,%0\n\tincl %0":"=r" (__limit):"r" (segment)); \
 __limit; })
 
-#define log_proc(pid, type)                                       \
-	{                                                             \
-		fprintk(3, "%d\t%c\t%d\n", pid, type, jiffies);           \
-		printk("\t[log_proc]\t%d\t%c\t%d\n", pid, type, jiffies); \
+#define log_proc(pid, type)                             \
+	{                                                   \
+		fprintk(3, "%d\t%c\t%d\n", pid, type, jiffies); \
 	}
+// printk("\t[log_proc]\t%d\t%c\t%d\n", pid, type, jiffies); \
 
 #endif

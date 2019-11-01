@@ -78,7 +78,7 @@ int fprintk(int fd, const char *fmt, ...)
 	/* 假定>=3的描述符都与文件关联。事实上，还存在很多其它情况，这里并没有考虑。*/
 	{
 		/* Work only if we have process 1 (init) up and working */
-		if (last_pid > 0)
+		if (last_pid > 3)
 		{
 			/* 从进程1的文件描述符表中得到文件句柄 */
 			if (!(file = task[1]->filp[fd]))
@@ -104,7 +104,7 @@ int fprintk(int fd, const char *fmt, ...)
 		}
 		else
 		{
-			printk("fprintk(%d) failed: no init\n", fd);
+			// printk("fprintk(%d) failed: no init\n", fd);
 		}
 	}
 	return count;
