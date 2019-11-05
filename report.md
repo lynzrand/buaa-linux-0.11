@@ -95,6 +95,10 @@ void wake_up(struct task_struct **p)
 }
 ```
 
+## 运行 process.c
+
+![运行 `process.c`](https://i.loli.net/2019/11/02/zmJ6byuf8NtKTLR.png)
+
 # 回答问题
 
 > 结合自己的体会，谈谈从程序设计者的角度看，单进程编程和多进程编程最大的区别是什么？

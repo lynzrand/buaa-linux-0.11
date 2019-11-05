@@ -173,7 +173,7 @@ void schedule(void)
 int sys_pause(void)
 {
 	current->state = TASK_INTERRUPTIBLE;
-	// log_proc(current->pid, 'W');
+	log_proc(current->pid, 'W');
 	schedule();
 	return 0;
 }

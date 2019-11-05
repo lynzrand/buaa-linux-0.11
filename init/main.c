@@ -173,16 +173,16 @@ void init(void)
 	int pid, i;
 
 	setup((void *)&drive_info);
-
 	(void)open("/dev/tty0", O_RDWR, 0);
 	(void)dup(0);
 	(void)dup(0);
 
-	(void)open("/var/process.log", O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	(void)open("/var/process.log", O_WRONLY | O_CREAT | O_TRUNC, 0666);
 
 	printf("%d buffers = %d bytes buffer space\n\r", NR_BUFFERS,
 		   NR_BUFFERS * BLOCK_SIZE);
 	printf("Free mem: %d bytes\n\r", memory_end - main_memory_start);
+
 	if (!(pid = fork()))
 	{
 		close(0);

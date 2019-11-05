@@ -78,12 +78,12 @@ int fprintk(int fd, const char *fmt, ...)
 	/* 假定>=3的描述符都与文件关联。事实上，还存在很多其它情况，这里并没有考虑。*/
 	{
 		/* Work only if we have process 1 (init) up and working */
-		if (last_pid > 3)
+		if (last_pid > 1)
 		{
 			/* 从进程1的文件描述符表中得到文件句柄 */
 			if (!(file = task[1]->filp[fd]))
 			{
-				printk("fprintk(%d) failed: no file\n", fd);
+				// printk("fprintk(%d) failed: no file\n", fd);
 				return 0;
 			}
 			inode = file->f_inode;
