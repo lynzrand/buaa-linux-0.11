@@ -88,6 +88,7 @@ struct task_struct
 	long signal;
 	struct sigaction sigaction[32];
 	long blocked; /* bitmap of masked signals */
+	long kernel_stack;
 				  /* various fields */
 	int exit_code;
 	unsigned long start_code, end_code, end_data, brk, start_stack;
@@ -115,22 +116,30 @@ struct task_struct
  *  INIT_TASK is used to set up the first task table, touch at
  * your own risk!. Base=0, limit=0x9ffff (=640kB)
  */
-#define INIT_TASK                                                                                                                                                                                                      \
-	/* state etc */ {                                                                                                                                                                                                  \
-		0, 15, 15,                                                                                                                                                                                                     \
-			/* signals */ 0, {                                                                                                                                                                                         \
-								 {},                                                                                                                                                                                   \
-							 },                                                                                                                                                                                        \
-			0, /* ec,brk... */ 0, 0, 0, 0, 0, 0, /* pid etc.. */ 0, -1, 0, 0, 0, /* uid etc */ 0, 0, 0, 0, 0, 0, /* alarm */ 0, 0, 0, 0, 0, 0, /* math */ 0, /* fs info */ -1, 0022, NULL, NULL, NULL, 0, /* filp */ { \
-																																																		   NULL,       \
-																																																	   },              \
-			{                                                                                                                                                                                                          \
-				{0, 0},                                                                                                                                                                                                \
-				/* ldt */ {0x9f, 0xc0fa00},                                                                                                                                                                            \
-				{0x9f, 0xc0f200},                                                                                                                                                                                      \
-			},                                                                                                                                                                                                         \
-			/*tss*/ {0, PAGE_SIZE + (long)&init_task, 0x10, 0, 0, 0, 0, (long)&pg_dir, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x17, 0x17, 0x17, 0x17, 0x17, 0x17, _LDT(0), 0x80000000, {}},                                     \
+
+// clang-format off
+#define INIT_TASK \
+/* state etc */ {\
+	0, 15, 15, \
+	/* signals */ 0, { {}, }, \
+	0, \
+	/* esp */ PAGE_SIZE+(long)&init_task, \
+	/* ec,brk... */ 0, 0, 0, 0, 0, 0, \
+	/* pid etc.. */ 0, -1, 0, 0, 0, \
+	/* uid etc */ 0, 0, 0, 0, 0, 0, \
+	/* alarm */ 0, 0, 0, 0, 0, 0, \
+	/* math */ 0, \
+	/* fs info */ -1, 0022, NULL, NULL, NULL, 0, \
+	/* filp */ { NULL, }, \
+	{\
+		{0, 0},\
+		/* ldt */ {0x9f, 0xc0fa00},\
+		{0x9f, 0xc0f200},\
+	}, \
+	/*tss*/ {0, PAGE_SIZE + (long)&init_task, 0x10, 0, 0, 0, 0, (long)&pg_dir, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x17, 0x17, 0x17, 0x17, 0x17, 0x17, _LDT(0), 0x80000000, {}}, \
 	}
+
+// clang-format on
 
 extern struct task_struct *task[NR_TASKS];
 extern struct task_struct *last_task_used_math;
@@ -167,24 +176,16 @@ extern void wake_up(struct task_struct **p);
  * This also clears the TS-flag if the task we switched to has used
  * tha math co-processor latest.
  */
-#define switch_to(n)                                 \
-	{                                                \
-		struct                                       \
-		{                                            \
-			long a, b;                               \
-		} __tmp;                                     \
-		__asm__("cmpl %%ecx,current\n\t"             \
-				"je 1f\n\t"                          \
-				"movw %%dx,%1\n\t"                   \
-				"xchgl %%ecx,current\n\t"            \
-				"ljmp *%0\n\t"                       \
-				"cmpl %%ecx,last_task_used_math\n\t" \
-				"jne 1f\n\t"                         \
-				"clts\n"                             \
-				"1:" ::"m"(*&__tmp.a),               \
-				"m"(*&__tmp.b),                      \
-				"d"(_TSS(n)), "c"((long)task[n]));   \
-	}
+
+// #define switch_to(p, ldt)                           \
+// 	{                                               \
+// 		struct                                      \
+// 		{                                           \
+// 			long a, b;                              \
+// 		} __tmp;                                    \
+// \
+// 	}
+extern void switch_to(struct task_struct *p, unsigned long ldt);
 
 #define PAGE_ALIGN(n) (((n) + 0xfff) & 0xfffff000)
 

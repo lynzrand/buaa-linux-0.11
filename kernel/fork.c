@@ -18,6 +18,7 @@
 #include <linux/sched.h>
 
 extern void write_verify(unsigned long address);
+extern void first_return_from_kernel();
 
 long last_pid = 0;
 
@@ -76,12 +77,44 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs, long none,
 	struct task_struct *p;
 	int i;
 	struct file *f;
+	long *krnstack;
 
 	p = (struct task_struct *)get_free_page();
 	if (!p)
 		return -EAGAIN;
+	/* 输出新建进程的信息到日志文件中 */
+	/* 此时为新建态('N')*/
+
+	/* 子进程内核栈位置 */
+	krnstack = (long *)(PAGE_SIZE + (long)p);
+	printk("%p %ld\n", p, krnstack);
+	/* 设置子进程内核栈 */
+	*(--krnstack) = ss & 0xffff;
+	*(--krnstack) = esp;
+	*(--krnstack) = eflags;
+	*(--krnstack) = cs & 0xffff;
+	*(--krnstack) = eip;
+	/* first_return_from_kernel中会弹出这些值 */
+	*(--krnstack) = ds & 0xffff;
+	*(--krnstack) = es & 0xffff;
+	*(--krnstack) = fs & 0xffff;
+	*(--krnstack) = gs & 0xffff;
+	*(--krnstack) = esi;
+	*(--krnstack) = edi;
+	*(--krnstack) = edx;
+	/* 当一个新建立的进程被调度执行时在switch_to结束后要执行first_return_from_kernle */
+	*(--krnstack) = (long)first_return_from_kernel;
+	/* switch_to函数中会使用内核栈中的这些值，所以这里需要在最开始的时候先保存下来 */
+	*(--krnstack) = ebp;
+	*(--krnstack) = ecx;
+	*(--krnstack) = ebx;
+	*(--krnstack) = 0; // 实际上是eax，子进程fork返回值为0，所以这里设置为0
+
 	task[nr] = p;
 	*p = *current; /* NOTE! this doesn't copy the supervisor stack */
+
+	p->kernel_stack = krnstack; /* 在PCB中设置好内核栈栈顶 */
+
 	p->state = TASK_UNINTERRUPTIBLE;
 	p->pid = last_pid;
 	p->father = current->pid;
@@ -92,12 +125,15 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs, long none,
 	p->utime = p->stime = 0;
 	p->cutime = p->cstime = 0;
 	p->start_time = jiffies;
+
+	/* 修改TSS的内容全部注释掉*/
+	/*
 	p->tss.back_link = 0;
-	p->tss.esp0 = PAGE_SIZE + (long)p;
+	p->tss.esp0 = PAGE_SIZE + (long) p;
 	p->tss.ss0 = 0x10;
-	p->tss.eip = eip;
+	p->tss.eip = eip;  // 子进程在被调度时直接跳到父进程中同样的位置开始执行
 	p->tss.eflags = eflags;
-	p->tss.eax = 0;
+	p->tss.eax = 0;  // 子进程返回0
 	p->tss.ecx = ecx;
 	p->tss.edx = edx;
 	p->tss.ebx = ebx;
@@ -114,7 +150,8 @@ int copy_process(int nr, long ebp, long edi, long esi, long gs, long none,
 	p->tss.ldt = _LDT(nr);
 	p->tss.trace_bitmap = 0x80000000;
 	if (last_task_used_math == current)
-		__asm__("clts ; fnsave %0" ::"m"(p->tss.i387));
+		__asm__("clts ; fnsave %0"::"m" (p->tss.i387));
+	*/
 	if (copy_mem(nr, p))
 	{
 		task[nr] = NULL;

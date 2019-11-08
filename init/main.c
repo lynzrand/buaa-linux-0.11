@@ -136,6 +136,7 @@ void main(void) /* This really IS void, no error here. */
 	floppy_init();
 	sti();
 	move_to_user_mode();
+
 	if (!fork())
 	{ /* we count on this going ok */
 		init();
@@ -171,7 +172,7 @@ static char *envp[] = {"HOME=/usr/root", NULL};
 void init(void)
 {
 	int pid, i;
-
+	printf("test\n");
 	setup((void *)&drive_info);
 	(void)open("/dev/tty0", O_RDWR, 0);
 	(void)dup(0);

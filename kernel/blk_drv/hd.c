@@ -80,6 +80,7 @@ int sys_setup(void *BIOS)
 	struct partition *p;
 	struct buffer_head *bh;
 
+	printk("setup\n");
 	if (!callable)
 		return -1;
 	callable = 0;

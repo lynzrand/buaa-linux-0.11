@@ -64,8 +64,11 @@ long startup_time = 0;
 struct task_struct *current = &(init_task.task);
 struct task_struct *last_task_used_math = NULL;
 
-struct task_struct *task[NR_TASKS] = {
-	&(init_task.task),
+struct tss_struc *tss = &(init_task.task.tss);
+
+struct task_struct *
+	task[NR_TASKS] = {
+		&(init_task.task),
 };
 
 long user_stack[PAGE_SIZE >> 2];
@@ -114,6 +117,7 @@ void schedule(void)
 {
 	int i, next, c;
 	struct task_struct **p;
+	struct task_struct *pnext = current;
 
 	/* check alarm, wake up any interruptible tasks that have got a signal */
 
@@ -143,7 +147,7 @@ void schedule(void)
 			if (!*--p)
 				continue;
 			if ((*p)->state == TASK_RUNNING && (*p)->counter > c)
-				c = (*p)->counter, next = i;
+				c = (*p)->counter, next = i, pnext = *p;
 		}
 		if (c)
 			break;
@@ -152,7 +156,30 @@ void schedule(void)
 				(*p)->counter = ((*p)->counter >> 1) +
 								(*p)->priority;
 	}
-	switch_to(next);
+	// printk("Switching to %d@%d", pnext->pid, pnext);
+	switch_to(pnext, _LDT(next));
+	// __asm__("KERNEL_STACK=(33*16)\n\t"
+	// 		"movl %0, %%ebx\n\t"
+	// 		"cmpl %%ebx, %2\n\t"
+	// 		"je 1f\n\t"
+	// 		"movl %%ebx, %%eax\n\t"
+	// 		"xchgl %%eax, %2\n\t"
+	// 		"movl %3, %%ecx\n\t"
+	// 		"addl $4096, %%ebx\n\t"
+	// 		"movl %%ebx, 4(%%ecx) # esp0\n\t"
+	// 		"movl %%esp, KERNEL_STACK(%%eax)\n\t"
+	// 		"movl 8(%%ebp), %%ebx\n\t"
+	// 		"movl KERNEL_STACK(%%ebx), %%esp\n\t"
+	// 		"movl 12(%%ebp), %%ecx\n\t"
+	// 		"lldt %%cx\n\t"
+	// 		"movl $0x17, %%ecx\n\t"
+	// 		"mov %%cx, %%fs\n\t"
+	// 		"cmpl %%eax, %4\n\t"
+	// 		"jne 1f\n\t"
+	// 		"clts\n\t"
+	// 		"1:" ::
+	// 			"m"(pnext),
+	// 		"m"(_LDT(next)), "m"(current), "m"(tss), "m"(last_task_used_math));
 }
 
 int sys_pause(void)
