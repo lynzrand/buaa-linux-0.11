@@ -4,7 +4,7 @@
 #define SEMAPHORE_NAME_LIMIT 24
 
 typedef struct {
-  char name[SEMAPHORE_NAME_LIMIT];
+  char name[SEMAPHORE_NAME_LIMIT + 1];
   int value;
   struct task_struct* waiting;
 } sem_t;
