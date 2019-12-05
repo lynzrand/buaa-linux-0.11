@@ -1,6 +1,7 @@
 #define __LIBRARY__
 #include <fcntl.h>
 #include <linux/semaphore.h>
+#include <linux/shm.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -10,6 +11,9 @@ _syscall2(sem_t*, sem_open, const char*, name, unsigned int, init_val);
 _syscall1(int, sem_wait, sem_t*, sem);
 _syscall1(int, sem_post, sem_t*, sem);
 _syscall1(int, sem_unlink, const char*, name);
+_syscall3(int, shmget, int, key, size_t, size, int, shm_flag);
+_syscall1(int, shmat, int, id);
+_syscall1(int, shmdt, int, key);
 
 #define BUFFER_FILE "/usr/root/buf"
 #define PRODUCER_MAX 1000
@@ -22,25 +26,23 @@ void producer() {
   sem_t* sync = sem_open("sync", 0);
   sem_t* full = sem_open("full", 0);
   int i, j, k;
+  int shmid;
+  int* buf;
 
-  int buf[buf_size] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
-  char* char_buf = (char*)buf;
+  shmid = shmget(789, sizeof(int) * buf_size, SHM_CREAT);
+  buf = shmat(shmid);
+
+  for (i = 0; i < buf_size; i++) {
+    buf[i] = -1;
+  }
 
   sem_post(sync);
   sem_post(empty);
-
-  buffer_id = open(BUFFER_FILE, O_RDWR | O_CREAT);
-  write(buffer_id, char_buf, char_buf_size);
-  close(buffer_id);
 
   while (i <= PRODUCER_MAX) {
     int j;
     sem_wait(empty);
     sem_wait(sync);
-
-    buffer_id = open(BUFFER_FILE, O_RDWR | O_CREAT);
-    read(buffer_id, char_buf, char_buf_size);
-    close(buffer_id);
 
     for (j = 0; j < buf_size; j++) {
       if (buf[j] < 0) {
@@ -49,27 +51,15 @@ void producer() {
       }
     }
 
-    buffer_id = open(BUFFER_FILE, O_RDWR | O_CREAT | O_TRUNC);
-    write(buffer_id, char_buf, char_buf_size);
-    close(buffer_id);
-
     sem_post(sync);
     sem_post(full);
   }
   sem_wait(empty);
   sem_wait(sync);
 
-  buffer_id = open(BUFFER_FILE, O_RDWR | O_CREAT);
-  read(buffer_id, char_buf, char_buf_size);
-  close(buffer_id);
-
   for (j = 0; j < buf_size; j++) {
     buf[j] = -2;
   }
-
-  buffer_id = open(BUFFER_FILE, O_RDWR | O_CREAT | O_TRUNC);
-  write(buffer_id, char_buf, char_buf_size);
-  close(buffer_id);
 
   sem_post(sync);
   sem_post(full);
@@ -79,11 +69,11 @@ void consumer() {
   sem_t* empty = sem_open("empty", 0);
   sem_t* sync = sem_open("sync", 0);
   sem_t* full = sem_open("full", 0);
-
-  int buffer_id;
-  int buf[buf_size] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
-  char* char_buf = (char*)buf;
+  int shmid;
+  int* buf;
   int i, j;
+  shmid = shmget(789, sizeof(int) * 10, SHM_CREAT);
+  buf = shmat(shmid);
 
   while (1) {
     int min = 0;
@@ -91,10 +81,6 @@ void consumer() {
     int has_data = 0;
     sem_wait(full);
     sem_wait(sync);
-
-    buffer_id = open(BUFFER_FILE, O_RDWR | O_CREAT, 0777);
-    read(buffer_id, char_buf, char_buf_size);
-    close(buffer_id);
 
     for (j = 0; j < buf_size; j++) {
       if (buf[j] >= 0) {
@@ -108,10 +94,6 @@ void consumer() {
         break;
       }
     }
-
-    buffer_id = open(BUFFER_FILE, O_RDWR | O_CREAT | O_TRUNC);
-    write(buffer_id, char_buf, char_buf_size);
-    close(buffer_id);
 
     sem_post(sync);
     if (has_data)

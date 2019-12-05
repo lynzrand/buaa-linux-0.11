@@ -135,6 +135,9 @@
 #define __NR_sem_wait 73
 #define __NR_sem_post 74
 #define __NR_sem_unlink 75
+#define __NR_shmget 76
+#define __NR_shmat 77
+#define __NR_shmdt 78
 
 #define _syscall0(type, name)                                       \
   type name(void) {                                                 \
