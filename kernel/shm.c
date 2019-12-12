@@ -32,20 +32,9 @@ int get_shm(int key) {
 }
 
 unsigned long create_shm_space(shm_entry* shm) {
-  unsigned long page_address;
-  unsigned long virt_address;
-  unsigned long data_base;
-  // int page_cnt = (shm->size / PAGE_SIZE) + 1;
-  // sys_brk(current->brk + page_cnt * PAGE_SIZE);
-  // data_base = current->brk + current->start_code;
-  // while (page_cnt--) {
-  //   page_address = shm->phys_page.data[page_cnt];
-  //   data_base -= PAGE_SIZE;
-  //   put_page(page_address, data_base);
-  // }
+  // sys_brk(current->brk + PAGE_SIZE);
   put_page(shm->phys_page, current->brk + current->start_code);
-
-  return data_base;
+  return current->brk;
 }
 
 void shm_new(shm_entry* self, int id, size_t size) {
@@ -53,7 +42,7 @@ void shm_new(shm_entry* self, int id, size_t size) {
   unsigned long page_address;
   self->id = id;
   self->phys_page = get_free_page();
-  self->rc = 0;
+  self->rc = 1;
   self->size = size;
   // self->start = create_shm_space(self);
   // while (page_cnt--) {
@@ -66,9 +55,13 @@ int sys_shmget(int key, size_t size, int shm_flag) {
   int i;
 
   if ((i = get_shm(key)) != -1) {
+    printk("kernel: Getting shared memory at %ld for %d\n",
+           shm_repo[i].phys_page, current->pid);
     return i;
   } else if ((shm_flag & SHM_CREAT) && (i = get_spare_shm()) != -1) {
     shm_new(&shm_repo[i], key, size);
+    printk("kernel: Allocating shared memory at %ld for %d\n",
+           shm_repo[i].phys_page, current->pid);
     return i;
   } else {
     return EINVAL;
@@ -76,12 +69,19 @@ int sys_shmget(int key, size_t size, int shm_flag) {
 }
 
 void* sys_shmat(int id) {
+  // if (shm_repo[id].rc == 0)
+  //   return -ENOENT;
   shm_repo[id].rc++;
-  return create_shm_space(&shm_repo[id]);
+  void* space = (void*)create_shm_space(&shm_repo[id]);
+  printk(
+      "kernel: Creating space at %p, pointing at %ld for %d\nvalue is: %ld\n",
+      space, shm_repo[id].phys_page, current->pid, *(unsigned long long*)space);
+
+  return space;
 }
 
 int sys_shmdt(int id) {
-  shm_repo[id].rc--;
+  shm_repo[id].rc = 0;
   // if (shm_repo[id].rc <= 0) {
   // ul_vec_drop(&shm_repo[id].rc);
   // }
